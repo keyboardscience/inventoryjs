@@ -1,0 +1,8 @@
+// %s/Example/<desired model name>/g
+var mongoose    = require('mongoose'),
+    Schema      = mongoose.Schema;
+
+var ExampleSchema = new Schema({
+});
+
+module.exports = mongoose.model('Example', ExampleSchema);

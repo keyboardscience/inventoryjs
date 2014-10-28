@@ -1,0 +1,497 @@
+/**
+ * 
+ * @author Kevin Phillips
+ * @email kphillips@inventoryjs.io
+ * 
+ */
+
+global.rootRequire = function (name) {
+    return require(__dirname + '/' + name);
+}
+
+var Asset       = require('../models/asset'),
+    Type        = require('../models/type'),
+    Cluster     = require('../models/cluster'),
+    Reservation = require('../models/reservation'),
+    User        = require('../models/user'),
+    express     = require('express'),
+    _Clack      = rootRequire('Clack');
+
+var ijsRouter = function() {
+    return this._construct();
+};
+
+ijsRouter.prototype._construct = function () {
+    // instantiate the router
+    this.router = express.Router();
+    //this.router = this.app.Router();
+    
+    // create logging middleware
+    this.router.use(function(req,res,next) {
+        console.log('[' + new Date().toString() + '] ' + req.method + ' request for ' + req.originalUrl);
+        next();
+    } );
+    
+    // attach the other router points
+    this.attachRoutes();
+    return this.router;
+};
+
+ijsRouter.prototype.attachRoutes = function () {
+    var me = this;
+
+    Object.keys(this.routes).forEach(function (operation) {
+        var router = me.router,
+            op = operation; // holy batman it's a string
+
+        Object.keys(me.routes[op]).forEach(function (j) {
+            me.routes[op][j].forEach(function (k) {
+                var alias = router.route(k.endpoint);
+                switch (op) {
+                    case 'create':
+                        alias.post(k.cb);
+                        break;
+                    case 'read':
+                        alias.get(k.cb);
+                        break;
+                    case 'update':
+                        alias.put(k.cb);
+                        break;
+                    case 'delete':
+                        alias.delete(k.cb);
+                        break;
+                    default:
+                        break;
+                }
+            } );
+        } );
+    } );
+};
+
+ijsRouter.prototype.routes = {
+    create: {
+        assets: [
+            {
+                alias: 'createAsset',
+                method: 'POST',
+                endpoint: '/assets',
+                cb: function (req, res) {
+                    _Clack._create(req, res, Asset, [ 'number', 'name', 'make', 'model', 'type' ]);
+                }
+            }
+        ],
+        types: [
+            {
+                alias: 'createType',
+                method: 'POST',
+                endpoint: '/types',
+                cb: function (req, res) {
+                    _Clack._create(req, res, Type, [ 'name', 'short', 'make', 'model' ]);
+                }
+            }
+        ],
+        cluster: [
+            {
+                alias: 'createCluster',
+                method: 'POST',
+                endpoint: '/clusters',
+                req_params: [ 'name', 'owner' ],
+                cb: function (req,res) {
+                    _Clack._create(req, res, Cluster, [ 'name', 'owner' ]);
+                }
+            }
+        ],
+        reservation: [
+            {
+                alias: 'createReservation',
+                method: 'POST',
+                endpoint: '/reservations',
+                req_params: [ 'cluster_name', 'timestamp', 'duration', 'requested_start', 'requestee_username' ],
+                cb: function (req,res) {
+                    _Clack._create(req,res,Reservation,[ 'cluster_name', 'timestamp', 'duration', 'requested_start', 'requestee_username' ]);
+                }
+            }
+        ],
+        user: [
+            {
+                alias: 'createUser',
+                method: 'POST',
+                endpoint: '/users',
+                req_params: [ 'name', 'first', 'last', 'email', 'password' ],
+                cb: function (req,res) {
+                    _Clack._create(req,res,User,[ 'name', 'first', 'last', 'email', 'password' ]);
+                }
+            }
+        ]
+    },
+    read: {
+        assets: [
+            {
+                alias: 'readAll',
+                method: 'GET',
+                endpoint: '/assets',
+                cb: function (req, res) {
+                    _Clack._getAll(req, res, Asset);
+                }
+            },
+            {
+                alias: 'readAllByMakeName',
+                method: 'GET',
+                endpoint: '/assets/make/:make_name',
+                cb: function (req, res) {
+                    _Clack._getAllBy(req, res, Asset, 'make', req.params.make_name);
+                }
+            },
+            {
+                alias: 'readAllByModelName',
+                method: 'GET',
+                endpoint: '/assets/model/:model_name',
+                cb: function (req, res) {
+                    _Clack._getAllBy(req,res,Asset,'model',req.params.model_name);
+                }
+            },
+            {
+                alias: 'readAllByIndicator',
+                method: 'GET',
+                endpoint: '/assets/indicator/:indicator_level',
+                cb: function (req, res) {
+                    _Clack._getAllBy(req,res,Asset,'status.indicator',req.params.indicator_level);
+                }
+            }
+        ],
+        asset: [
+            {
+                alias: 'readByAssetNumber',
+                method: 'GET',
+                endpoint: '/asset/number/:asset_number',
+                cb: function (req, res) {
+                    _Clack._getOneBy(req, res, Asset, 'number', req.params.asset_number);
+                }
+            }
+        ],
+        types: [
+            {
+                alias: 'readAll',
+                method: 'GET',
+                endpoint: '/types',
+                cb: function (req, res) {
+                    _Clack._getAll(req, res, Type);
+                }
+            },
+            {
+                alias: 'readAllByMakeName',
+                method: 'GET',
+                endpoint: '/types/make/:make_name',
+                cb: function (req, res) {
+                    _Clack._getAllBy(req, res, Type, 'make', req.params.make_name);
+                }
+            },
+            {
+                alias: 'readAllByModelName',
+                method: 'GET',
+                endpoint: '/types/model/:model_name',
+                cb: function (req,res) {
+                    _Clack._getAllBy(req, res, Type, 'model', req.params.model_name);
+                }
+            }
+        ],
+        type: [
+            {
+                alias: 'readByShortName',
+                method: 'GET',
+                endpoint: '/type/:short_name',
+                cb: function (req,res) {
+                    _Clack._getOneBy(req, res, Asset, 'short', req.params.short_name);
+                }
+            }
+        ],
+        clusters: [
+            {
+                alias: 'readAll',
+                method: 'GET',
+                endpoint: '/clusters',
+                cb: function (req,res) {
+                    _Clack._getAll(req, res, Cluster);
+                }
+            },
+            {
+                alias: 'readAllByOwner',
+                method: 'GET',
+                endpoint: '/clusters/owner/:owner_name',
+                cb: function (req,res) {
+                    _Clack._getAllBy(req,res,Cluster,'owner_name',req.params.owner_name);
+                }
+            }
+        ],
+        cluster: [
+            {
+                alias: 'readClusterMembersByName',
+                method: 'GET',
+                endpoint: '/members/:cluster_name',
+                cb: function (req, res) {
+                    _Clack._getAllByClusterName(req,res,Asset,req.params.cluster_name);
+                }
+            },
+            {
+                alias: 'readCluster',
+                method: 'GET',
+                endpoint: '/cluster/:cluster_name',
+                cb: function (req, res) {
+                    _Clack._getOneBy(req, res, Cluster, req.params.cluster_name);
+                }
+            }
+        ],
+        reservations: [
+            {
+                alias: 'readAll',
+                method: 'GET',
+                endpoint: '/reservations',
+                cb: function (req,res) {
+                    _Clack._getAll(req,res,Reservation);
+                }
+            },
+            {
+                alias: 'readAllByClusterName',
+                method: 'GET',
+                endpoint: '/reservations/cluster/:cluster_name',
+                cb: function (req,res) {
+                    _Clack._getAllBy(req,res,Reservation,'cluster_name',req.params.cluster_name);
+                }
+            },
+            {
+                alias: 'readAllByUsername',
+                method: 'GET',
+                endpoint: '/reservations/user/:username',
+                cb: function (req,res) {
+                    _Clack._getAllBy(req,res,Reservation,'requestee_username',req.params.username);
+                }
+            },
+            {
+                alias: 'readAllByDuration',
+                method: 'GET',
+                endpoint: '/reservations/duration/:duration',
+                cb: function (req,res) {
+                    _Clack._getAllBy(req,res,Reservation,'duration',req.params.duration);
+                }
+            },
+            {
+                alias: 'readAllByRequestedStart',
+                method: 'GET',
+                endpoint: '/reservations/start/:date',
+                cb: function (req,res) {
+                    _Clack._getAllBy(req,res,Reservation,'requested_start',req.params.date);
+                }
+            }
+        ],
+        users: [
+            {
+                alias: 'readAll',
+                method: 'GET',
+                endpoint: '/users',
+                cb: function (req,res) {
+                    _Clack._getAll(req,res,User);
+                }
+            }
+        ],
+        user: [
+            {
+                alias: 'readByUsername',
+                method: 'GET',
+                endpoint: '/user/username/:username',
+                cb: function (req,res) {
+                    _Clack._getAllBy(req,res,User,'name',req.params.username);
+                }
+            },
+            {
+                alias: 'readByEmail',
+                method: 'GET',
+                endpoint: '/user/email/:email',
+                cb: function (req,res) {
+                    _Clack._getAllBy(req,res,User,'email',req.params.email);
+                }
+            }
+        ]
+    },
+    update: {
+        asset: [
+            {
+                alias: 'changeName',
+                endpoint: '/asset/name/:_id',
+                method: 'POST',
+                cb: function (req, res) {
+                     _Clack._updateOneBy(req,res,Asset,req.params._id,'name');
+                }
+            },
+            {
+                alias: 'changeMake',
+                endpoint: '/asset/make/:_id',
+                method: 'POST',
+                cb: function (req, res) {
+                    _Clack._updateOneBy(req,res,Asset,req.params._id,'make');
+                }
+            },
+            {
+                alias: 'changeModel',
+                endpoint: '/asset/model/:_id',
+                method: 'POST',
+                cb: function (req, res) {
+                    _Clack._updateOneBy(req,res,Asset,req.params._id,'model');
+                }
+            },
+            {
+                alias: 'changeType',
+                endpoint: '/asset/type/:_id',
+                method:  'POST',
+                cb: function (req, res) {
+                    _Clack._updateOneBy(req,res,Asset,req.params._id,'type');
+                }
+
+            },
+            {
+                alias: 'changeCluster',
+                endpoint: '/asset/cluster/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,Asset,req.params._id,'cluster_name');
+                }
+            },
+            {
+                alias: 'changeVirt',
+                endpoint: '/asset/virt/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,Asset,req.params._id,'virt');
+                }
+            },
+            {
+                alias: 'chanageNodeStatus',
+                endpoint: '/asset/status/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateAssetStatus(req,res,Asset,params._id);
+                }
+            }
+        ],
+        type: [
+            {
+                alias: 'chanageTypeName',
+                endpoint: '/type/name/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,Type,req.params._id,'name');
+                }
+            },
+            {
+                alias: 'changeTypeMake',
+                endpoint: '/type/make/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,Type,req.params._id,'make');
+                }
+            },
+            {
+                alias: 'changeTypeModel',
+                endpoint: '/type/model/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,Type,req.params._id,'model');
+                }
+            }
+        ],
+        cluster: [
+            {
+                alias: 'changeClusterName',
+                endpoint: '/cluster/name/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,Cluster,req.params._id,'name');
+                }
+            },
+            {
+                alias: 'changeClusterOwner',
+                endpoint: '/cluster/owner/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,Cluster,req.params._id,'owner');
+                }
+            }
+        },
+        reservation: [
+            {
+                alias: 'changeReservationCluster',
+                endpoint: '/reservation/cluster/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,Reservation,req.params._id,'cluster_name');
+                }
+            },
+            {
+                alias: 'changeReservationDuration',
+                endpoint: '/reservation/duration/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,Reservation,req.params._id,'duration');
+                }
+            },
+            {
+                alias: 'chanageReservationRequestedStart',
+                endpoint: '/reservation/start/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,Reservation,req.params._id,'requested_start');
+                }
+            }
+        ],
+        user: [
+            {
+                alias: 'changeUserName',
+                endpoint: '/user/name/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,User,req.params._id,'name');
+                }
+            },
+            {
+                alias: 'changeUserFirst',
+                endpoint: '/user/firstname/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,req.params._id,'first');
+                }
+            },
+            {
+                alias: 'changeUserLast',
+                endpoint: '/user/lastname/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,req.params._id,'last');
+                }
+            },
+            {
+                alais: 'changeUserEmail',
+                endpoint: '/user/email/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,req.params._id,'email');
+                }
+            },
+            {
+                alias: 'changeUserPassword',
+                endpoint: '/user/password/:_id',
+                method: 'POST',
+                cb: function (req,res) {
+                    _Clack._updateOneBy(req,res,req.params._id,'password');
+                }
+            }
+        ]
+    },
+    delete: {
+        assets: [
+        ],
+        types: [
+        ]
+    } 
+};
+
+
+module.exports = ijsRouter;

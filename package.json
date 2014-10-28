@@ -1,0 +1,11 @@
+{
+    "name": "inventoryjs",
+    "description": "An inventory system written in js with persistance in MongoDB",
+    "version": "0.0.1",
+    "private": true,
+    "dependencies": {
+        "express" : "4.x",
+        "body-parser": "x",
+        "mongoose" : "3.x"
+    }
+}
