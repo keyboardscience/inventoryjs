@@ -4,7 +4,7 @@ inventoryjs
 An inventory API built on Express and Mongoose using the NodeJS framework
 
 Modules
-=======
+--------
 
 IJS is split into a few javascript modules:
   * app/utils/Clack - the project namespace
@@ -15,7 +15,7 @@ IJS is split into a few javascript modules:
 IJS stores all of its models in app/utils/models/. I'll have a diagram on backend design up shortly.
 
 Immediate Todo's:
-==================
+------------------
 
 So much to do, so little time to do so. Here is a quick list of todos to make this a functional project:
   * Add additional read functions for UI ease
